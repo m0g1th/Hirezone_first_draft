@@ -3935,7 +3935,6 @@ function App() {
                   }
                   disabled={
                     sendingRequest ||
-                    !selectedConnectChallengeId ||
                     !connectMessage.trim()
                   }
                 >
