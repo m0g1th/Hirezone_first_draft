@@ -1,47 +1,67 @@
-/* Structural recruiter workspace. Keeps existing React behavior intact. */
+/* HireZone recruiter workspace: structural side rails + professional visual hierarchy. */
 
-/* Give the authenticated recruiter area a true networking-workspace composition. */
+:root {
+  --hz-rail-blue: #0a66c2;
+  --hz-rail-navy: #17324d;
+  --hz-rail-muted: #526273;
+  --hz-rail-border: #d9e1e8;
+  --hz-rail-bg: #ffffff;
+}
+
 @media (min-width: 1180px) {
   .container:has(.hero) {
-    width: calc(100% - 48px) !important;
-    max-width: 1480px !important;
+    width: calc(100% - 40px) !important;
+    max-width: 1500px !important;
     display: grid !important;
-    grid-template-columns: 220px minmax(0, 1fr) 250px !important;
-    column-gap: 16px !important;
+    grid-template-columns: 252px minmax(0, 1fr) 292px !important;
+    column-gap: 18px !important;
     align-items: start !important;
     position: relative !important;
   }
 
+  /* Left and right rails are deliberate UI surfaces, not blank decorative columns. */
   .container:has(.hero)::before,
   .container:has(.hero)::after {
     display: block !important;
     position: sticky !important;
-    top: 82px !important;
-    min-height: 300px !important;
+    top: 70px !important;
+    min-height: 430px !important;
     box-sizing: border-box !important;
-    background: #fff !important;
-    border: 1px solid var(--hz-li-border) !important;
-    border-radius: 8px !important;
-    color: var(--hz-li-text) !important;
+    background: var(--hz-rail-bg) !important;
+    border: 1px solid var(--hz-rail-border) !important;
+    border-radius: 10px !important;
+    color: var(--hz-rail-text, var(--hz-rail-navy)) !important;
     white-space: pre-line !important;
-    font-size: 13px !important;
-    line-height: 1.7 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.65 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04) !important;
+    overflow: hidden !important;
   }
 
   .container:has(.hero)::before {
-    content: "RECRUITER WORKSPACE\A\AFind candidates\AReview proof of work\AManage connections\AReview challenges\A\AYour hiring workspace" !important;
+    content: "HZ\A\A RECRUITER WORKSPACE\A\AFind Candidates\AReview Proof of Work\AManage Connections\AReview Challenges\A\A──────────────\A\AYour hiring workspace\A\AOrganize your search, review candidate evidence, and start relevant conversations from one place." !important;
     grid-column: 1 !important;
     grid-row: 1 / span 6 !important;
-    padding: 20px 16px !important;
-    border-top: 3px solid var(--hz-li-blue) !important;
+    padding: 22px 20px !important;
+    border-top: 4px solid var(--hz-rail-blue) !important;
+    background:
+      radial-gradient(circle at 28px 29px, rgba(10,102,194,.15) 0 25px, transparent 26px),
+      linear-gradient(180deg, #fff 0%, #fbfcfd 100%) !important;
+    font-weight: 500 !important;
+    letter-spacing: .01em !important;
   }
 
   .container:has(.hero)::after {
-    content: "HIRING TOOLS\A\AUse candidate filters to narrow\nthe talent pool.\A\AOpen Proof of Work to inspect\nprojects and repositories.\A\AUse Connect to start a\nrecruiter conversation." !important;
+    content: "HIREZONE\A\AHIRING TOOLS\A\A01   Candidate Filters\A\AUse skills, domains, districts, AI score and badges to narrow the talent pool.\A\A02   Proof of Work\A\AInspect projects, skills, scores and the project-specific GitHub repository.\A\A03   Connect\A\ASend a direct recruiter connection when a profile is relevant to your hiring needs.\A\A──────────────\A\AProfessional talent discovery, built for industry hiring." !important;
     grid-column: 3 !important;
     grid-row: 1 / span 6 !important;
-    padding: 20px 16px !important;
-    border-top: 3px solid #70b5f9 !important;
+    padding: 22px 20px !important;
+    border-top: 4px solid #70b5f9 !important;
+    background:
+      radial-gradient(circle at calc(100% - 30px) 30px, rgba(112,181,249,.2) 0 28px, transparent 29px),
+      linear-gradient(180deg, #fff 0%, #fbfcfd 100%) !important;
+    font-weight: 500 !important;
   }
 
   .container:has(.hero) > .hero,
@@ -59,16 +79,27 @@
   .container:has(.hero) > .candidate-grid { grid-row: 4 !important; }
 }
 
-/* Make the discovery page feel like a feed of professional profiles. */
+/* Candidate discovery should read as a professional talent feed. */
 .candidate-grid {
   align-items: stretch !important;
+  gap: 14px !important;
 }
 
 .candidate-card {
   display: flex !important;
   flex-direction: column !important;
-  min-height: 390px !important;
+  min-height: 410px !important;
   overflow: hidden !important;
+  border-radius: 9px !important;
+  border: 1px solid #dfe5ea !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04) !important;
+}
+
+.candidate-card:hover {
+  border-color: #b9cde0 !important;
+  box-shadow: 0 6px 18px rgba(23,50,77,.09) !important;
+  transform: translateY(-1px) !important;
 }
 
 .candidate-card .candidate-actions,
@@ -90,18 +121,19 @@
   margin-top: 12px !important;
 }
 
-/* Compact professional search header. */
+/* Stronger discovery header. */
 .hero {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: 24px !important;
+  min-height: 96px !important;
 }
 
 .hero .candidate-count {
   flex: 0 0 auto !important;
-  min-width: 130px !important;
-  padding-left: 22px !important;
+  min-width: 140px !important;
+  padding-left: 24px !important;
   border-left: 1px solid var(--hz-li-border) !important;
 }
 
@@ -111,10 +143,10 @@
   justify-content: space-between !important;
 }
 
-/* Connections becomes a networking feed rather than a narrow report. */
+/* Connections should also feel like a professional networking feed. */
 @media (min-width: 1180px) {
   .container:has(.connections-page) {
-    width: calc(100% - 48px) !important;
+    width: calc(100% - 40px) !important;
     max-width: 1280px !important;
   }
 }
@@ -122,23 +154,22 @@
 .connections-page .connection-card {
   padding: 22px !important;
   border-left: 3px solid transparent !important;
+  border-radius: 9px !important;
 }
 
 .connections-page .connection-card:hover {
-  border-left-color: var(--hz-li-blue) !important;
+  border-left-color: var(--hz-rail-blue) !important;
 }
 
 .connections-page .stat-card {
   min-height: 92px !important;
 }
 
-/* Keep the background intentional instead of showing a large blank canvas. */
+/* The application background supports the white product surfaces without huge blank contrast. */
 .app {
-  background:
-    linear-gradient(#eef1f4, #eef1f4) !important;
+  background: #eef1f4 !important;
 }
 
-/* Remove accidental oversized vertical gaps from the original dashboard rules. */
 .container > * {
   box-sizing: border-box !important;
 }
@@ -153,6 +184,7 @@
   .hero {
     display: block !important;
   }
+
   .hero .candidate-count {
     border-left: 0 !important;
     border-top: 1px solid var(--hz-li-border) !important;
