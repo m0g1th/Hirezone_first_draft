@@ -1971,16 +1971,6 @@ function App() {
       }
 
       if (
-        !selectedConnectChallengeId
-      ) {
-        setConnectError(
-          'Please select a challenge.',
-        )
-
-        return
-      }
-
-      if (
         !connectMessage.trim()
       ) {
         setConnectError(
@@ -2006,9 +1996,9 @@ function App() {
               selectedProof.student_id,
 
             p_challenge_id:
-              Number(
-                selectedConnectChallengeId,
-              ),
+  selectedConnectChallengeId
+    ? Number(selectedConnectChallengeId)
+    : null,
 
             p_message:
               connectMessage.trim(),
