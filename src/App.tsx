@@ -52,6 +52,12 @@ type CandidateProof = {
   profile_score: number | null
   district?: string | null
   last_updated?: string | null
+  github_url?: string | null
+  github_repos?: {
+  project_name: string
+  github_url: string
+  live_demo_url?: string | null
+}[]
 }
 
 type Filters = {
@@ -1080,7 +1086,7 @@ function App() {
             data,
             error: rpcError,
           } = await supabase.rpc(
-            'search_candidates',
+            'search_relevant_candidates',
             rpcFilters,
           )
 
@@ -1753,55 +1759,135 @@ function App() {
     )
   }
 
-  const loadCandidateProof =
-    async (
-      studentId: number,
-    ) => {
-      setProofLoading(true)
-      setProofError('')
-      setSelectedProof(null)
+  const loadCandidateProof = async (studentId: number) => {
+  console.log('Opening proof for student:', studentId)
 
-      try {
-        const {
-          data,
-          error,
-        } = await supabase.rpc(
-          'get_candidate_proof',
-          {
-            p_student_id:
-              studentId,
-          },
-        )
+  setProofLoading(true)
+  setProofError('')
+  setSelectedProof(null)
 
-        if (error) {
-          throw error
-        }
+  try {
+    const { data, error } = await supabase.rpc(
+      'get_candidate_proof',
+      {
+        p_student_id: studentId,
+      },
+    )
 
-        const row =
-          Array.isArray(data)
-            ? data[0]
-            : null
+    console.log('Proof RPC response:', { data, error })
 
-        if (!row) {
-          throw new Error(
-            'No proof-of-work record found for this candidate.',
-          )
-        }
-
-        setSelectedProof(
-          row as CandidateProof,
-        )
-      } catch (err) {
-        setProofError(
-          err instanceof Error
-            ? err.message
-            : 'Unable to load proof of work.',
-        )
-      } finally {
-        setProofLoading(false)
-      }
+    if (error) {
+      throw new Error(error.message)
     }
 
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      throw new Error(
+        'No proof-of-work record found for this candidate.',
+      )
+    }
+
+    // RPC returns TABLE, so use the first row.
+    const row = data[0]
+
+    let githubUrl: string | null = null
+    const {
+  data: githubRepos,
+  error: githubError,
+} = await supabase.rpc(
+  'get_candidate_github_repos',
+  {
+    p_student_id: studentId,
+  },
+)
+
+if (githubError) {
+  console.warn(
+    'Failed to load GitHub repositories:',
+    githubError,
+  )
+}
+
+const { data: projectData } = await supabase.rpc(
+  'get_recruiter_projects',
+  {
+    p_student_id: studentId,
+    p_project_type: null,
+    p_challenge_id: null,
+    p_limit: 50,
+  },
+)
+
+if (Array.isArray(projectData)) {
+  const matchingProject = projectData.find(
+    (project: {
+      project_name?: string | null
+      github_url?: string | null
+    }) =>
+      project.project_name?.trim().toLowerCase() ===
+      row.project_name?.trim().toLowerCase() &&
+      project.github_url,
+  )
+
+  githubUrl = matchingProject?.github_url ?? null
+}
+
+    console.log('Proof loaded:', row)
+
+    setSelectedProof({
+      student_id: Number(row.student_id),
+      student_name: row.student_name ?? '',
+      email: row.email ?? '',
+      location: row.location ?? '',
+      education: row.education ?? '',
+      college_name: row.college_name ?? '',
+      graduation_year: Number(row.graduation_year ?? 0),
+      proof_id:
+        row.proof_id === null
+          ? null
+          : Number(row.proof_id),
+      project_name: row.project_name ?? 'Project',
+      domain: row.domain ?? 'General',
+      skills: Array.isArray(row.skills)
+        ? row.skills
+        : [],
+      ai_test_score:
+        row.ai_test_score === null
+          ? null
+          : Number(row.ai_test_score),
+      ai_test_passed:
+        row.ai_test_passed ?? false,
+      badges_earned:
+        row.badges_earned === null
+          ? 0
+          : Number(row.badges_earned),
+      milestones_completed:
+        row.milestones_completed === null
+          ? 0
+          : Number(row.milestones_completed),
+      blog_posts_count:
+        row.blog_posts_count === null
+          ? 0
+          : Number(row.blog_posts_count),
+      profile_score:
+        row.profile_score === null
+          ? 0
+          : Number(row.profile_score),
+      last_updated:
+        row.last_updated ?? null,
+        github_url: githubUrl,
+    })
+  } catch (err) {
+    console.error('Failed to load candidate proof:', err)
+
+    setProofError(
+      err instanceof Error
+        ? err.message
+        : 'Unable to load proof of work.',
+    )
+  } finally {
+    setProofLoading(false)
+  }
+}
   const openConnectModal = () => {
     if (
       !selectedProof
@@ -3565,7 +3651,24 @@ function App() {
                   }
                 </p>
               </div>
+<div className="proof-section">
+  <h3>Repository</h3>
 
+  {selectedProof.github_url ? (
+    <a
+      href={selectedProof.github_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="github-repository-link"
+    >
+      View GitHub Repository
+    </a>
+  ) : (
+    <p className="github-unavailable">
+      GitHub repository not provided for this project.
+    </p>
+  )}
+</div>
               <div className="proof-skills">
                 {(
                   selectedProof.skills ??

@@ -3381,3 +3381,36 @@ button.auth-mode-active {
   }
 
 }
+.github-repository-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0.75rem 1rem;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+  color: var(--text-primary);
+
+  font-size: 0.85rem;
+  font-weight: 700;
+
+  text-decoration: none;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.github-repository-link:hover {
+  border-color: var(--accent);
+  background: var(--surface-secondary);
+}
+
+.github-unavailable {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
