@@ -1919,7 +1919,8 @@ function App() {
   } finally {
     setProofLoading(false)
   }
-} const openConnectModal = () => {
+}
+ const openConnectModal = () => {
     if (
       !selectedProof
     ) {
