@@ -1759,14 +1759,14 @@ function App() {
     )
   }
 
-  const loadCandidateProof = async (studentId: number) => {
+ const loadCandidateProof = async (studentId: number) => {
   console.log('Opening proof for student:', studentId)
   setProofLoading(true)
   setProofError('')
   setSelectedProof(null)
 
   try {
-    // Load the candidate's proof-of-work details
+    // Load the proof-of-work record
     const { data, error } = await supabase.rpc(
       'get_candidate_proof',
       { p_student_id: studentId },
@@ -1784,9 +1784,7 @@ function App() {
 
     const row = data[0]
 
-    // Load ALL GitHub repositories belonging to this student.
-    // Do not try to match project names because proof_of_work.project_name
-    // and student_projects.project_name may not always be identical.
+    // Load this student's GitHub projects
     const {
       data: githubRepos,
       error: githubError,
@@ -1802,33 +1800,28 @@ function App() {
       )
     }
 
-    const repositories = Array.isArray(githubRepos)
-      ? githubRepos
-          .filter(
+    // IMPORTANT:
+    // Only use the GitHub repository whose project name
+    // matches the Proof-of-Work project being displayed.
+    const proofProjectName =
+      row.project_name?.trim().toLowerCase() || ''
+
+    const matchingRepository =
+      Array.isArray(githubRepos)
+        ? githubRepos.find(
             (repo: {
               project_name?: string | null
               github_url?: string | null
-              live_demo_url?: string | null
             }) =>
+              repo.project_name?.trim().toLowerCase() ===
+                proofProjectName &&
               typeof repo.github_url === 'string' &&
               repo.github_url.trim() !== '',
           )
-          .map(
-            (repo: {
-              project_name?: string | null
-              github_url?: string | null
-              live_demo_url?: string | null
-            }) => ({
-              project_name:
-                repo.project_name?.trim() || 'Student Project',
-              github_url: repo.github_url!.trim(),
-              live_demo_url:
-                repo.live_demo_url?.trim() || null,
-            }),
-          )
-      : []
+        : null
 
-    console.log('GitHub repositories loaded:', repositories)
+    console.log('Proof project:', row.project_name)
+    console.log('Matching GitHub repository:', matchingRepository)
 
     setSelectedProof({
       student_id: Number(row.student_id),
@@ -1843,55 +1836,75 @@ function App() {
         row.graduation_year !== undefined
           ? Number(row.graduation_year)
           : null,
+
       proof_id:
         row.proof_id !== null &&
         row.proof_id !== undefined
           ? Number(row.proof_id)
           : null,
+
       project_name: row.project_name ?? '',
       domain: row.domain ?? '',
       skills: Array.isArray(row.skills) ? row.skills : [],
+
       milestones_completed:
         row.milestones_completed !== null &&
         row.milestones_completed !== undefined
           ? Number(row.milestones_completed)
           : 0,
+
       ai_test_score:
         row.ai_test_score !== null &&
         row.ai_test_score !== undefined
           ? Number(row.ai_test_score)
           : null,
+
       ai_test_passed:
         row.ai_test_passed !== null &&
         row.ai_test_passed !== undefined
           ? Boolean(row.ai_test_passed)
           : false,
+
       blog_posts_count:
         row.blog_posts_count !== null &&
         row.blog_posts_count !== undefined
           ? Number(row.blog_posts_count)
           : 0,
+
       badges_earned:
         row.badges_earned !== null &&
         row.badges_earned !== undefined
           ? Number(row.badges_earned)
           : 0,
+
       profile_score:
         row.profile_score !== null &&
         row.profile_score !== undefined
           ? Number(row.profile_score)
           : null,
+
       last_updated: row.last_updated ?? null,
 
-      // Store every real GitHub repository returned by Supabase.
-      github_repos: repositories,
-
-      // Keep this field for compatibility with any existing code,
-      // using the first available repository.
+      // Only the repository belonging to the
+      // current Proof-of-Work project.
       github_url:
-        repositories.length > 0
-          ? repositories[0].github_url
-          : null,
+        matchingRepository?.github_url?.trim() ?? null,
+
+      github_repos: matchingRepository
+        ? [
+            {
+              project_name:
+                matchingRepository.project_name?.trim() ||
+                row.project_name ||
+                'Student Project',
+              github_url:
+                matchingRepository.github_url!.trim(),
+              live_demo_url:
+                matchingRepository.live_demo_url?.trim() ||
+                null,
+            },
+          ]
+        : [],
     })
 
     console.log('Proof loaded successfully:', row)
@@ -1906,8 +1919,7 @@ function App() {
   } finally {
     setProofLoading(false)
   }
-}
-  const openConnectModal = () => {
+} const openConnectModal = () => {
     if (
       !selectedProof
     ) {
@@ -3671,7 +3683,7 @@ function App() {
                 </p>
               </div>
 <div className="proof-section">
-  <h3>GitHub Repositories</h3>
+  <h3>GitHub Repository</h3>
 
   {selectedProof.github_repos &&
   selectedProof.github_repos.length > 0 ? (
@@ -3682,9 +3694,7 @@ function App() {
           key={`${repo.github_url}-${index}`}
         >
           <div className="github-repository-info">
-            <strong>
-              {repo.project_name || 'Student Project'}
-            </strong>
+            <strong>{repo.project_name}</strong>
 
             {repo.live_demo_url && (
               <a
@@ -3711,10 +3721,10 @@ function App() {
     </div>
   ) : (
     <p className="github-unavailable">
-      No GitHub repository provided by this candidate.
+      GitHub repository not provided for this project.
     </p>
   )}
-</div>              <div className="proof-skills">
+</div>           <div className="proof-skills">
                 {(
                   selectedProof.skills ??
                   []
