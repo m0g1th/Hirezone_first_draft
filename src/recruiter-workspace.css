@@ -1,0 +1,162 @@
+/* Structural recruiter workspace. Keeps existing React behavior intact. */
+
+/* Give the authenticated recruiter area a true networking-workspace composition. */
+@media (min-width: 1180px) {
+  .container:has(.hero) {
+    width: calc(100% - 48px) !important;
+    max-width: 1480px !important;
+    display: grid !important;
+    grid-template-columns: 220px minmax(0, 1fr) 250px !important;
+    column-gap: 16px !important;
+    align-items: start !important;
+    position: relative !important;
+  }
+
+  .container:has(.hero)::before,
+  .container:has(.hero)::after {
+    display: block !important;
+    position: sticky !important;
+    top: 82px !important;
+    min-height: 300px !important;
+    box-sizing: border-box !important;
+    background: #fff !important;
+    border: 1px solid var(--hz-li-border) !important;
+    border-radius: 8px !important;
+    color: var(--hz-li-text) !important;
+    white-space: pre-line !important;
+    font-size: 13px !important;
+    line-height: 1.7 !important;
+  }
+
+  .container:has(.hero)::before {
+    content: "RECRUITER WORKSPACE\A\AFind candidates\AReview proof of work\AManage connections\AReview challenges\A\AYour hiring workspace" !important;
+    grid-column: 1 !important;
+    grid-row: 1 / span 6 !important;
+    padding: 20px 16px !important;
+    border-top: 3px solid var(--hz-li-blue) !important;
+  }
+
+  .container:has(.hero)::after {
+    content: "HIRING TOOLS\A\AUse candidate filters to narrow\nthe talent pool.\A\AOpen Proof of Work to inspect\nprojects and repositories.\A\AUse Connect to start a\nrecruiter conversation." !important;
+    grid-column: 3 !important;
+    grid-row: 1 / span 6 !important;
+    padding: 20px 16px !important;
+    border-top: 3px solid #70b5f9 !important;
+  }
+
+  .container:has(.hero) > .hero,
+  .container:has(.hero) > .filters,
+  .container:has(.hero) > .results-header,
+  .container:has(.hero) > .candidate-grid,
+  .container:has(.hero) > .error-message,
+  .container:has(.hero) > .notice {
+    grid-column: 2 !important;
+  }
+
+  .container:has(.hero) > .hero { grid-row: 1 !important; }
+  .container:has(.hero) > .filters { grid-row: 2 !important; }
+  .container:has(.hero) > .results-header { grid-row: 3 !important; }
+  .container:has(.hero) > .candidate-grid { grid-row: 4 !important; }
+}
+
+/* Make the discovery page feel like a feed of professional profiles. */
+.candidate-grid {
+  align-items: stretch !important;
+}
+
+.candidate-card {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 390px !important;
+  overflow: hidden !important;
+}
+
+.candidate-card .candidate-actions,
+.candidate-card .card-actions {
+  margin-top: auto !important;
+}
+
+.candidate-card .candidate-top {
+  padding-bottom: 12px !important;
+  border-bottom: 1px solid #edf0f2 !important;
+  margin-bottom: 12px !important;
+}
+
+.candidate-card .project {
+  margin-top: 12px !important;
+}
+
+.candidate-card .metrics {
+  margin-top: 12px !important;
+}
+
+/* Compact professional search header. */
+.hero {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 24px !important;
+}
+
+.hero .candidate-count {
+  flex: 0 0 auto !important;
+  min-width: 130px !important;
+  padding-left: 22px !important;
+  border-left: 1px solid var(--hz-li-border) !important;
+}
+
+.filters .filter-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* Connections becomes a networking feed rather than a narrow report. */
+@media (min-width: 1180px) {
+  .container:has(.connections-page) {
+    width: calc(100% - 48px) !important;
+    max-width: 1280px !important;
+  }
+}
+
+.connections-page .connection-card {
+  padding: 22px !important;
+  border-left: 3px solid transparent !important;
+}
+
+.connections-page .connection-card:hover {
+  border-left-color: var(--hz-li-blue) !important;
+}
+
+.connections-page .stat-card {
+  min-height: 92px !important;
+}
+
+/* Keep the background intentional instead of showing a large blank canvas. */
+.app {
+  background:
+    linear-gradient(#eef1f4, #eef1f4) !important;
+}
+
+/* Remove accidental oversized vertical gaps from the original dashboard rules. */
+.container > * {
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 1179px) {
+  .container:has(.hero) {
+    width: calc(100% - 24px) !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .hero {
+    display: block !important;
+  }
+  .hero .candidate-count {
+    border-left: 0 !important;
+    border-top: 1px solid var(--hz-li-border) !important;
+    margin-top: 14px !important;
+    padding: 12px 0 0 !important;
+  }
+}
