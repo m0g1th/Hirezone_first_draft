@@ -1761,17 +1761,15 @@ function App() {
 
   const loadCandidateProof = async (studentId: number) => {
   console.log('Opening proof for student:', studentId)
-
   setProofLoading(true)
   setProofError('')
   setSelectedProof(null)
 
   try {
+    // Load the candidate's proof-of-work details
     const { data, error } = await supabase.rpc(
       'get_candidate_proof',
-      {
-        p_student_id: studentId,
-      },
+      { p_student_id: studentId },
     )
 
     console.log('Proof RPC response:', { data, error })
@@ -1781,108 +1779,129 @@ function App() {
     }
 
     if (!data || !Array.isArray(data) || data.length === 0) {
-      throw new Error(
-        'No proof-of-work record found for this candidate.',
+      throw new Error('No proof-of-work record found for this candidate.')
+    }
+
+    const row = data[0]
+
+    // Load ALL GitHub repositories belonging to this student.
+    // Do not try to match project names because proof_of_work.project_name
+    // and student_projects.project_name may not always be identical.
+    const {
+      data: githubRepos,
+      error: githubError,
+    } = await supabase.rpc(
+      'get_candidate_github_repos',
+      { p_student_id: studentId },
+    )
+
+    if (githubError) {
+      console.warn(
+        'Failed to load GitHub repositories:',
+        githubError,
       )
     }
 
-    // RPC returns TABLE, so use the first row.
-    const row = data[0]
+    const repositories = Array.isArray(githubRepos)
+      ? githubRepos
+          .filter(
+            (repo: {
+              project_name?: string | null
+              github_url?: string | null
+              live_demo_url?: string | null
+            }) =>
+              typeof repo.github_url === 'string' &&
+              repo.github_url.trim() !== '',
+          )
+          .map(
+            (repo: {
+              project_name?: string | null
+              github_url?: string | null
+              live_demo_url?: string | null
+            }) => ({
+              project_name:
+                repo.project_name?.trim() || 'Student Project',
+              github_url: repo.github_url!.trim(),
+              live_demo_url:
+                repo.live_demo_url?.trim() || null,
+            }),
+          )
+      : []
 
-    let githubUrl: string | null = null
-    const {
-  data: githubRepos,
-  error: githubError,
-} = await supabase.rpc(
-  'get_candidate_github_repos',
-  {
-    p_student_id: studentId,
-  },
-)
-
-if (githubError) {
-  console.warn(
-    'Failed to load GitHub repositories:',
-    githubError,
-  )
-}
-
-const { data: projectData } = await supabase.rpc(
-  'get_recruiter_projects',
-  {
-    p_student_id: studentId,
-    p_project_type: null,
-    p_challenge_id: null,
-    p_limit: 50,
-  },
-)
-
-if (Array.isArray(projectData)) {
-  const matchingProject = projectData.find(
-    (project: {
-      project_name?: string | null
-      github_url?: string | null
-    }) =>
-      project.project_name?.trim().toLowerCase() ===
-      row.project_name?.trim().toLowerCase() &&
-      project.github_url,
-  )
-
-  githubUrl = matchingProject?.github_url ?? null
-}
-
-    console.log('Proof loaded:', row)
+    console.log('GitHub repositories loaded:', repositories)
 
     setSelectedProof({
       student_id: Number(row.student_id),
       student_name: row.student_name ?? '',
       email: row.email ?? '',
+      phone: row.phone ?? null,
       location: row.location ?? '',
       education: row.education ?? '',
       college_name: row.college_name ?? '',
-      graduation_year: Number(row.graduation_year ?? 0),
+      graduation_year:
+        row.graduation_year !== null &&
+        row.graduation_year !== undefined
+          ? Number(row.graduation_year)
+          : null,
       proof_id:
-        row.proof_id === null
-          ? null
-          : Number(row.proof_id),
-      project_name: row.project_name ?? 'Project',
-      domain: row.domain ?? 'General',
-      skills: Array.isArray(row.skills)
-        ? row.skills
-        : [],
-      ai_test_score:
-        row.ai_test_score === null
-          ? null
-          : Number(row.ai_test_score),
-      ai_test_passed:
-        row.ai_test_passed ?? false,
-      badges_earned:
-        row.badges_earned === null
-          ? 0
-          : Number(row.badges_earned),
+        row.proof_id !== null &&
+        row.proof_id !== undefined
+          ? Number(row.proof_id)
+          : null,
+      project_name: row.project_name ?? '',
+      domain: row.domain ?? '',
+      skills: Array.isArray(row.skills) ? row.skills : [],
       milestones_completed:
-        row.milestones_completed === null
-          ? 0
-          : Number(row.milestones_completed),
+        row.milestones_completed !== null &&
+        row.milestones_completed !== undefined
+          ? Number(row.milestones_completed)
+          : 0,
+      ai_test_score:
+        row.ai_test_score !== null &&
+        row.ai_test_score !== undefined
+          ? Number(row.ai_test_score)
+          : null,
+      ai_test_passed:
+        row.ai_test_passed !== null &&
+        row.ai_test_passed !== undefined
+          ? Boolean(row.ai_test_passed)
+          : false,
       blog_posts_count:
-        row.blog_posts_count === null
-          ? 0
-          : Number(row.blog_posts_count),
+        row.blog_posts_count !== null &&
+        row.blog_posts_count !== undefined
+          ? Number(row.blog_posts_count)
+          : 0,
+      badges_earned:
+        row.badges_earned !== null &&
+        row.badges_earned !== undefined
+          ? Number(row.badges_earned)
+          : 0,
       profile_score:
-        row.profile_score === null
-          ? 0
-          : Number(row.profile_score),
-      last_updated:
-        row.last_updated ?? null,
-        github_url: githubUrl,
+        row.profile_score !== null &&
+        row.profile_score !== undefined
+          ? Number(row.profile_score)
+          : null,
+      last_updated: row.last_updated ?? null,
+
+      // Store every real GitHub repository returned by Supabase.
+      github_repos: repositories,
+
+      // Keep this field for compatibility with any existing code,
+      // using the first available repository.
+      github_url:
+        repositories.length > 0
+          ? repositories[0].github_url
+          : null,
     })
-  } catch (err) {
-    console.error('Failed to load candidate proof:', err)
+
+    console.log('Proof loaded successfully:', row)
+  } catch (error) {
+    console.error('Failed to load candidate proof:', error)
 
     setProofError(
-      err instanceof Error
-        ? err.message
-        : 'Unable to load proof of work.',
+      error instanceof Error
+        ? error.message
+        : 'Failed to load candidate proof.',
     )
   } finally {
     setProofLoading(false)
@@ -3652,24 +3671,50 @@ if (Array.isArray(projectData)) {
                 </p>
               </div>
 <div className="proof-section">
-  <h3>Repository</h3>
+  <h3>GitHub Repositories</h3>
 
-  {selectedProof.github_url ? (
-    <a
-      href={selectedProof.github_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="github-repository-link"
-    >
-      View GitHub Repository
-    </a>
+  {selectedProof.github_repos &&
+  selectedProof.github_repos.length > 0 ? (
+    <div className="github-repository-list">
+      {selectedProof.github_repos.map((repo, index) => (
+        <div
+          className="github-repository-item"
+          key={`${repo.github_url}-${index}`}
+        >
+          <div className="github-repository-info">
+            <strong>
+              {repo.project_name || 'Student Project'}
+            </strong>
+
+            {repo.live_demo_url && (
+              <a
+                href={repo.live_demo_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="live-demo-link"
+              >
+                View Live Demo
+              </a>
+            )}
+          </div>
+
+          <a
+            href={repo.github_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="github-repository-link"
+          >
+            View Repository
+          </a>
+        </div>
+      ))}
+    </div>
   ) : (
     <p className="github-unavailable">
-      GitHub repository not provided for this project.
+      No GitHub repository provided by this candidate.
     </p>
   )}
-</div>
-              <div className="proof-skills">
+</div>              <div className="proof-skills">
                 {(
                   selectedProof.skills ??
                   []
