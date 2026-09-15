@@ -1,21 +1,25 @@
-/* HireZone LinkedIn-inspired professional marketplace layer.
-   Presentation-only: no RPCs, data flow, or business logic are changed. */
+/* HireZone professional networking UI layer.
+   Presentation-only: existing React logic, Supabase RPCs and data flow remain unchanged. */
 
 :root {
   --hz-li-blue: #0a66c2;
   --hz-li-blue-dark: #004182;
-  --hz-li-bg: #f3f2ef;
+  --hz-li-bg: #eef1f4;
   --hz-li-card: #ffffff;
   --hz-li-text: #1d2226;
   --hz-li-muted: #666666;
   --hz-li-border: #d6d9dc;
+  --hz-li-soft: #f8fafc;
 }
 
-body { background: var(--hz-li-bg) !important; }
-.app { background: var(--hz-li-bg) !important; color: var(--hz-li-text) !important; }
+html, body, #root { min-height: 100%; }
+body { margin: 0 !important; background: var(--hz-li-bg) !important; }
+.app { min-height: 100vh !important; background: var(--hz-li-bg) !important; color: var(--hz-li-text) !important; }
 
+/* Full-width professional header */
 .header {
   min-height: 64px !important;
+  height: 64px !important;
   padding: 0 28px !important;
   background: #fff !important;
   border-bottom: 1px solid var(--hz-li-border) !important;
@@ -38,33 +42,42 @@ body { background: var(--hz-li-bg) !important; }
   border-bottom-color: var(--hz-li-blue) !important;
 }
 
+/* Remove the oversized centered desktop gutters */
 .container, .main-container {
-  max-width: 1128px !important;
-  padding: 24px 16px 48px !important;
+  width: calc(100% - 32px) !important;
+  max-width: none !important;
+  margin: 0 auto !important;
+  padding: 18px 0 40px !important;
 }
 
 .hero {
-  padding: 22px 24px !important;
-  margin-bottom: 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 20px 24px !important;
+  margin: 0 0 10px !important;
   border-radius: 8px !important;
   background: #fff !important;
   border: 1px solid var(--hz-li-border) !important;
   box-shadow: none !important;
 }
-.hero h2 { font-size: 1.55rem !important; color: var(--hz-li-text) !important; }
+.hero h2 { font-size: 1.55rem !important; color: var(--hz-li-text) !important; margin-bottom: 4px !important; }
 .hero p { color: var(--hz-li-muted) !important; }
 .candidate-count strong { color: var(--hz-li-blue) !important; }
 
+/* Search/filter workspace */
 .filters {
-  padding: 18px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 16px 18px !important;
   margin-bottom: 12px !important;
   border-radius: 8px !important;
   background: #fff !important;
   border: 1px solid var(--hz-li-border) !important;
   box-shadow: none !important;
 }
-.filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+.filter-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 10px !important; }
 .filter-grid input, .filter-grid select {
+  min-height: 40px !important;
   border-radius: 4px !important;
   background: #fff !important;
   border: 1px solid #8c8f92 !important;
@@ -74,24 +87,31 @@ body { background: var(--hz-li-bg) !important; }
   box-shadow: 0 0 0 1px var(--hz-li-blue) !important;
 }
 .search-button, .login-button, .send-button, .connect-button {
-  border-radius: 20px !important;
+  border-radius: 6px !important;
   background: var(--hz-li-blue) !important;
   border-color: var(--hz-li-blue) !important;
+  box-shadow: none !important;
 }
 .search-button:hover, .login-button:hover, .send-button:hover, .connect-button:hover {
   background: var(--hz-li-blue-dark) !important;
   border-color: var(--hz-li-blue-dark) !important;
 }
 
-.results-header { margin: 16px 0 10px !important; }
-.results-header h2 { font-size: 1.2rem !important; }
-.candidate-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; }
+/* Dense candidate discovery grid */
+.results-header { margin: 14px 0 8px !important; }
+.results-header h2 { font-size: 1.15rem !important; }
+.candidate-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  align-items: start !important;
+}
 .candidate-card {
+  min-width: 0 !important;
   border-radius: 8px !important;
   background: #fff !important;
   border: 1px solid var(--hz-li-border) !important;
   box-shadow: none !important;
-  padding: 20px !important;
+  padding: 18px !important;
 }
 .candidate-card:hover { transform: none !important; border-color: #a9adb0 !important; box-shadow: 0 2px 8px rgba(0,0,0,.08) !important; }
 .avatar, .proof-avatar {
@@ -105,11 +125,11 @@ body { background: var(--hz-li-bg) !important; }
 .candidate-top p, .college, .connection-top p, .proof-header p { color: var(--hz-li-muted) !important; }
 .project, .proof-project {
   border-radius: 6px !important;
-  background: #f8fafb !important;
+  background: var(--hz-li-soft) !important;
   border: 1px solid #e1e4e6 !important;
 }
 .skills span, .proof-skills span, .selected-option {
-  border-radius: 16px !important;
+  border-radius: 4px !important;
   background: #eef3f8 !important;
   color: #38434d !important;
   border: 0 !important;
@@ -117,20 +137,20 @@ body { background: var(--hz-li-bg) !important; }
 .metrics, .proof-metrics { border-color: #e1e4e6 !important; }
 .relevance-score strong, .proof-score strong { color: var(--hz-li-blue) !important; }
 .view-button {
-  border-radius: 20px !important;
+  border-radius: 6px !important;
   border: 1px solid var(--hz-li-blue) !important;
   background: #fff !important;
   color: var(--hz-li-blue) !important;
 }
 .view-button:hover { background: #eef7ff !important; color: var(--hz-li-blue-dark) !important; transform: none !important; }
 
-.connections-page { max-width: 900px !important; }
+/* Connections uses the available width instead of a narrow centered column */
+.connections-page { width: 100% !important; max-width: none !important; margin: 0 auto !important; }
 .connections-header {
   padding: 18px 20px !important;
   background: #fff !important;
   border: 1px solid var(--hz-li-border) !important;
-  border-bottom: 1px solid var(--hz-li-border) !important;
-  border-radius: 8px 8px 0 0 !important;
+  border-radius: 8px !important;
 }
 .connection-card, .stat-card {
   border-radius: 8px !important;
@@ -139,7 +159,7 @@ body { background: var(--hz-li-bg) !important; }
   box-shadow: none !important;
 }
 .refresh-button, .status-filters button {
-  border-radius: 20px !important;
+  border-radius: 6px !important;
 }
 .status-filters button.filter-active {
   background: var(--hz-li-blue) !important;
@@ -147,6 +167,7 @@ body { background: var(--hz-li-bg) !important; }
   color: #fff !important;
 }
 
+/* Professional modals */
 .modal-overlay { background: rgba(0,0,0,.55) !important; }
 .proof-modal, .connect-modal, .success-modal, .loading-modal {
   border-radius: 8px !important;
@@ -154,13 +175,17 @@ body { background: var(--hz-li-bg) !important; }
   border: 1px solid var(--hz-li-border) !important;
   box-shadow: 0 12px 40px rgba(0,0,0,.2) !important;
 }
-.github-repository-item { border-radius: 6px !important; background: #f8fafb !important; }
-.github-repository-link { border-radius: 20px !important; background: var(--hz-li-blue) !important; }
+.github-repository-item { border-radius: 6px !important; background: var(--hz-li-soft) !important; }
+.github-repository-link { border-radius: 6px !important; background: var(--hz-li-blue) !important; }
 .github-repository-link:hover { background: var(--hz-li-blue-dark) !important; }
 
-@media (max-width: 900px) {
-  .header { padding: 0 14px !important; }
-  .candidate-grid { grid-template-columns: 1fr !important; }
-  .filter-grid { grid-template-columns: 1fr !important; }
-  .container, .main-container { padding: 16px 12px 40px !important; }
+@media (max-width: 1100px) {
+  .candidate-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
+@media (max-width: 700px) {
+  .header { padding: 0 12px !important; }
+  .container, .main-container { width: calc(100% - 20px) !important; padding-top: 12px !important; }
+  .candidate-grid, .filter-grid { grid-template-columns: 1fr !important; }
 }
