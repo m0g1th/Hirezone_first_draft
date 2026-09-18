@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type FormEvent,
 } from 'react'
 
 import { supabase } from './lib/supabase'
@@ -36,10 +37,11 @@ type CandidateProof = {
   student_id: number
   student_name: string
   email: string
+  phone?: string | null
   location: string
   education: string
   college_name: string
-  graduation_year: number
+  graduation_year: number | null
   proof_id?: number | null
   project_name: string
   domain: string
@@ -54,10 +56,10 @@ type CandidateProof = {
   last_updated?: string | null
   github_url?: string | null
   github_repos?: {
-  project_name: string
-  github_url: string
-  live_demo_url?: string | null
-}[]
+    project_name: string
+    github_url: string
+    live_demo_url?: string | null
+  }[]
 }
 
 type Filters = {
@@ -97,10 +99,7 @@ type Connection = {
 
 type Theme = 'light' | 'dark'
 
-type FontSize =
-  | 'small'
-  | 'medium'
-  | 'large'
+type FontSize = 'small' | 'medium' | 'large'
 
 type RecruiterSession = {
   recruiter_id: number
@@ -125,8 +124,7 @@ const DEFAULT_FILTERS: Filters = {
   minBadges: '',
 }
 
-const SESSION_STORAGE_KEY =
-  'hirezone:recruiter-session'
+const SESSION_STORAGE_KEY = 'hirezone:recruiter-session'
 
 const DEFAULT_SKILLS = [
   'JavaScript',
@@ -155,22 +153,15 @@ const DEFAULT_DOMAINS = [
   'Mechanical Engineering',
 ]
 
-function getSentStorageKey(
-  recruiterId: number,
-) {
+function getSentStorageKey(recruiterId: number) {
   return `hirezone:pending-requests:${recruiterId}`
 }
 
-function loadPendingIdsFor(
-  recruiterId: number,
-): Set<number> {
+function loadPendingIdsFor(recruiterId: number): Set<number> {
   try {
-    const raw =
-      localStorage.getItem(
-        getSentStorageKey(
-          recruiterId,
-        ),
-      )
+    const raw = localStorage.getItem(
+      getSentStorageKey(recruiterId),
+    )
 
     if (!raw) {
       return new Set()
@@ -179,9 +170,7 @@ function loadPendingIdsFor(
     const arr = JSON.parse(raw)
 
     return new Set(
-      Array.isArray(arr)
-        ? arr.map(Number)
-        : [],
+      Array.isArray(arr) ? arr.map(Number) : [],
     )
   } catch {
     return new Set()
@@ -194,12 +183,8 @@ function persistPendingIdsFor(
 ) {
   try {
     localStorage.setItem(
-      getSentStorageKey(
-        recruiterId,
-      ),
-      JSON.stringify(
-        Array.from(ids),
-      ),
+      getSentStorageKey(recruiterId),
+      JSON.stringify(Array.from(ids)),
     )
   } catch {
     // Ignore storage errors.
@@ -208,26 +193,20 @@ function persistPendingIdsFor(
 
 function loadStoredSession(): RecruiterSession | null {
   try {
-    const raw =
-      localStorage.getItem(
-        SESSION_STORAGE_KEY,
-      )
+    const raw = localStorage.getItem(
+      SESSION_STORAGE_KEY,
+    )
 
     if (!raw) {
       return null
     }
 
-    const parsed =
-      JSON.parse(
-        raw,
-      ) as RecruiterSession
+    const parsed = JSON.parse(raw) as RecruiterSession
 
     if (
       parsed &&
-      typeof parsed.recruiter_id ===
-        'number' &&
-      typeof parsed.company_name ===
-        'string'
+      typeof parsed.recruiter_id === 'number' &&
+      typeof parsed.company_name === 'string'
     ) {
       return parsed
     }
@@ -242,10 +221,7 @@ function formatNumber(
   value: number | null | undefined,
   decimals = 0,
 ) {
-  if (
-    value === null ||
-    value === undefined
-  ) {
+  if (value === null || value === undefined) {
     return '—'
   }
 
@@ -255,41 +231,25 @@ function formatNumber(
     return '—'
   }
 
-  return numeric.toFixed(
-    decimals,
-  )
+  return numeric.toFixed(decimals)
 }
 
 function toRpcFilters(
   f: Filters,
   recruiterId: number | null,
 ) {
-  const skills =
-    f.skill
-      .map((skill) => skill.trim())
-      .filter(
-        (skill) =>
-          skill.length > 0,
-      )
+  const skills = f.skill
+    .map((skill) => skill.trim())
+    .filter((skill) => skill.length > 0)
 
-  const district =
-    f.district.trim()
+  const district = f.district.trim()
 
-  const domains =
-    f.domain
-      .map((domain) =>
-        domain.trim(),
-      )
-      .filter(
-        (domain) =>
-          domain.length > 0,
-      )
+  const domains = f.domain
+    .map((domain) => domain.trim())
+    .filter((domain) => domain.length > 0)
 
-  const minScoreText =
-    f.minScore.trim()
-
-  const minBadgesText =
-    f.minBadges.trim()
+  const minScoreText = f.minScore.trim()
+  const minBadgesText = f.minBadges.trim()
 
   const minScore =
     minScoreText === ''
@@ -302,20 +262,13 @@ function toRpcFilters(
       : Number(minBadgesText)
 
   return {
-    p_skill:
-      skills.length > 0
-        ? skills
-        : null,
+    p_skill: skills.length > 0 ? skills : null,
 
     p_district:
-      district.length > 0
-        ? district
-        : null,
+      district.length > 0 ? district : null,
 
     p_domain:
-      domains.length > 0
-        ? domains
-        : null,
+      domains.length > 0 ? domains : null,
 
     p_min_score:
       minScore !== null &&
@@ -325,12 +278,8 @@ function toRpcFilters(
 
     p_min_badges:
       minBadges !== null &&
-      Number.isFinite(
-        minBadges,
-      )
-        ? Math.floor(
-            minBadges,
-          )
+      Number.isFinite(minBadges)
+        ? Math.floor(minBadges)
         : null,
 
     p_limit: 50,
@@ -340,25 +289,14 @@ function toRpcFilters(
   }
 }
 
-function isDuplicateKeyError(
-  message: string,
-) {
-  const value =
-    message.toLowerCase()
+function isDuplicateKeyError(message: string) {
+  const value = message.toLowerCase()
 
   return (
-    value.includes(
-      'duplicate',
-    ) ||
-    value.includes(
-      'unique',
-    ) ||
-    value.includes(
-      'already',
-    ) ||
-    value.includes(
-      '23505',
-    )
+    value.includes('duplicate') ||
+    value.includes('unique') ||
+    value.includes('already') ||
+    value.includes('23505')
   )
 }
 
@@ -367,85 +305,53 @@ async function fetchExistingConnectStatus(
   studentId: number,
 ): Promise<ConnectStatus | null> {
   const tables = [
-    'recruiter_connections_view',
     'recruiter_connects',
   ]
 
   for (const table of tables) {
     try {
-      const {
-        data,
-        error,
-      } = await supabase
+      const { data, error } = await supabase
         .from(table)
         .select('*')
-        .eq(
-          'recruiter_id',
-          recruiterId,
-        )
-        .eq(
-          'student_id',
-          studentId,
-        )
+        .eq('recruiter_id', recruiterId)
+        .eq('student_id', studentId)
         .limit(1)
 
       if (error) {
         continue
       }
 
-      if (
-        !data ||
-        data.length === 0
-      ) {
+      if (!data || data.length === 0) {
         continue
       }
 
-      const row =
-        data[0] as Record<
-          string,
-          unknown
-        >
+      const row = data[0] as Record<string, unknown>
 
-      const rawStatus =
-        String(
-          row.status ??
-            row.connection_status ??
-            row.request_status ??
-            '',
-        ).toLowerCase()
+      const rawStatus = String(
+        row.status ??
+          row.connection_status ??
+          row.request_status ??
+          '',
+      ).toLowerCase()
 
       if (
-        rawStatus.includes(
-          'accept',
-        ) ||
-        rawStatus.includes(
-          'approved',
-        )
+        rawStatus.includes('accept') ||
+        rawStatus.includes('approved')
       ) {
         return 'accepted'
       }
 
       if (
-        rawStatus.includes(
-          'pending',
-        ) ||
-        rawStatus.includes(
-          'sent',
-        ) ||
-        rawStatus.includes(
-          'viewed',
-        )
+        rawStatus.includes('pending') ||
+        rawStatus.includes('sent') ||
+        rawStatus.includes('viewed')
       ) {
         return 'pending'
       }
 
       if (
-        rawStatus.includes(
-          'reject',
-        ) ||
-        rawStatus.includes(
-          'declin',
-        )
+        rawStatus.includes('reject') ||
+        rawStatus.includes('declin')
       ) {
         return 'none'
       }
@@ -460,346 +366,199 @@ async function fetchExistingConnectStatus(
 }
 
 function App() {
-  const [
-    candidates,
-    setCandidates,
-  ] = useState<Candidate[]>([])
+  const [candidates, setCandidates] =
+    useState<Candidate[]>([])
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true)
+  const [loading, setLoading] =
+    useState(true)
 
-  const [
-    error,
-    setError,
-  ] = useState('')
+  const [error, setError] =
+    useState('')
 
-  const [
-    notice,
-    setNotice,
-  ] = useState('')
+  const [notice, setNotice] =
+    useState('')
 
-  const [
-    filters,
-    setFilters,
-  ] = useState<Filters>(
-    DEFAULT_FILTERS,
-  )
+  const [filters, setFilters] =
+    useState<Filters>(DEFAULT_FILTERS)
 
-  const [
-    skillOptions,
-    setSkillOptions,
-  ] = useState<string[]>(
-    DEFAULT_SKILLS,
-  )
+  const [skillOptions, setSkillOptions] =
+    useState<string[]>(DEFAULT_SKILLS)
 
-  const [
-    domainOptions,
-    setDomainOptions,
-  ] = useState<string[]>(
-    DEFAULT_DOMAINS,
-  )
+  const [domainOptions, setDomainOptions] =
+    useState<string[]>(DEFAULT_DOMAINS)
 
-  const [
-    recruiter,
-    setRecruiter,
-  ] = useState<
-    RecruiterSession | null
-  >(() =>
-    loadStoredSession(),
-  )
+  const [recruiter, setRecruiter] =
+    useState<RecruiterSession | null>(
+      () => loadStoredSession(),
+    )
 
-  const [
-    loginRecruiterId,
-    setLoginRecruiterId,
-  ] = useState('')
+  const [loginRecruiterId, setLoginRecruiterId] =
+    useState('')
 
-  const [
-    loginPassword,
-    setLoginPassword,
-  ] = useState('')
+  const [loginPassword, setLoginPassword] =
+    useState('')
 
-  const [
-    authMode,
-    setAuthMode,
-  ] = useState<
-    'login' | 'register'
-  >('login')
+  const [authMode, setAuthMode] =
+    useState<'login' | 'register'>('login')
 
-  const [
-    registerCompanyName,
-    setRegisterCompanyName,
-  ] = useState('')
+  const [registerCompanyName, setRegisterCompanyName] =
+    useState('')
 
-  const [
-    registerEmail,
-    setRegisterEmail,
-  ] = useState('')
+  const [registerEmail, setRegisterEmail] =
+    useState('')
 
-  const [
-    registerPassword,
-    setRegisterPassword,
-  ] = useState('')
+  const [registerPassword, setRegisterPassword] =
+    useState('')
 
-  const [
-    registerPhone,
-    setRegisterPhone,
-  ] = useState('')
+  const [registerPhone, setRegisterPhone] =
+    useState('')
 
-  const [
-    registerLocation,
-    setRegisterLocation,
-  ] = useState('')
+  const [registerLocation, setRegisterLocation] =
+    useState('')
 
-  const [
-    registerIndustry,
-    setRegisterIndustry,
-  ] = useState('')
+  const [registerIndustry, setRegisterIndustry] =
+    useState('')
 
-  const [
-    registerCompanyType,
-    setRegisterCompanyType,
-  ] = useState('')
+  const [registerCompanyType, setRegisterCompanyType] =
+    useState('')
 
-  const [
-    registerWebsite,
-    setRegisterWebsite,
-  ] = useState('')
+  const [registerWebsite, setRegisterWebsite] =
+    useState('')
 
-  const [
-    registerLoading,
-    setRegisterLoading,
-  ] = useState(false)
+  const [registerLoading, setRegisterLoading] =
+    useState(false)
 
-  const [
-    registerError,
-    setRegisterError,
-  ] = useState('')
+  const [registerError, setRegisterError] =
+    useState('')
 
-  const [
-    registeredRecruiterId,
-    setRegisteredRecruiterId,
-  ] = useState<
-    number | null
-  >(null)
+  const [registeredRecruiterId, setRegisteredRecruiterId] =
+    useState<number | null>(null)
 
-  const [
-    showRegisterPassword,
-    setShowRegisterPassword,
-  ] = useState(false)
+  const [showRegisterPassword, setShowRegisterPassword] =
+    useState(false)
 
-  const [
-    loginLoading,
-    setLoginLoading,
-  ] = useState(false)
+  const [loginLoading, setLoginLoading] =
+    useState(false)
 
-  const [
-    loginError,
-    setLoginError,
-  ] = useState('')
+  const [loginError, setLoginError] =
+    useState('')
 
-  const [
-    showLoginPassword,
-    setShowLoginPassword,
-  ] = useState(false)
+  const [showLoginPassword, setShowLoginPassword] =
+    useState(false)
 
-  const [
-    activePage,
-    setActivePage,
-  ] = useState<
-    'search' | 'connections'
-  >('search')
+  const [activePage, setActivePage] =
+    useState<'search' | 'connections'>('search')
 
-  const [
-    connections,
-    setConnections,
-  ] = useState<Connection[]>([])
+  const [connections, setConnections] =
+    useState<Connection[]>([])
 
-  const [
-    connectionsLoading,
-    setConnectionsLoading,
-  ] = useState(false)
+  const [connectionsLoading, setConnectionsLoading] =
+    useState(false)
 
-  const [
-    connectionStatusFilter,
-    setConnectionStatusFilter,
-  ] = useState('All')
+  const [connectionStatusFilter, setConnectionStatusFilter] =
+    useState('All')
 
-  const [
-    selectedProof,
-    setSelectedProof,
-  ] = useState<
-    CandidateProof | null
-  >(null)
+  const [selectedProof, setSelectedProof] =
+    useState<CandidateProof | null>(null)
 
-  const [
-    proofLoading,
-    setProofLoading,
-  ] = useState(false)
+  const [proofLoading, setProofLoading] =
+    useState(false)
 
-  const [
-    proofError,
-    setProofError,
-  ] = useState('')
+  const [proofError, setProofError] =
+    useState('')
 
-  const [
-    connectModalOpen,
-    setConnectModalOpen,
-  ] = useState(false)
+  const [connectModalOpen, setConnectModalOpen] =
+    useState(false)
 
-  // Challenge selected while sending a connection request.
-  const [
-    selectedConnectChallengeId,
-    setSelectedConnectChallengeId,
-  ] = useState('')
+  const [selectedConnectChallengeId, setSelectedConnectChallengeId] =
+    useState('')
 
-  // Challenge selected in candidate search.
-  const [
-    selectedChallengeId,
-    setSelectedChallengeId,
-  ] = useState<
-    number | null
-  >(null)
+  const [selectedChallengeId, setSelectedChallengeId] =
+    useState<number | null>(null)
 
-  const [
-    selectedChallenge,
-    setSelectedChallenge,
-  ] = useState<
-    Challenge | null
-  >(null)
+  const [selectedChallenge, setSelectedChallenge] =
+    useState<Challenge | null>(null)
 
-  const [
-    challenges,
-    setChallenges,
-  ] = useState<Challenge[]>([])
+  const [challenges, setChallenges] =
+    useState<Challenge[]>([])
 
-  const [
-    challengesLoading,
-    setChallengesLoading,
-  ] = useState(false)
+  const [challengesLoading, setChallengesLoading] =
+    useState(false)
 
-  const [
-    challengesError,
-    setChallengesError,
-  ] = useState<
-    string | null
-  >(null)
+  const [challengesError, setChallengesError] =
+    useState<string | null>(null)
 
-  const [
-    connectMessage,
-    setConnectMessage,
-  ] = useState(
-    DEFAULT_CONNECT_MESSAGE,
-  )
+  const [connectMessage, setConnectMessage] =
+    useState(DEFAULT_CONNECT_MESSAGE)
 
-  const [
-    connectError,
-    setConnectError,
-  ] = useState('')
+  const [connectError, setConnectError] =
+    useState('')
 
-  const [
-    sendingRequest,
-    setSendingRequest,
-  ] = useState(false)
+  const [sendingRequest, setSendingRequest] =
+    useState(false)
 
-  const [
-    connectSuccess,
-    setConnectSuccess,
-  ] = useState<
-    string | null
-  >(null)
+  const [connectSuccess, setConnectSuccess] =
+    useState<string | null>(null)
 
-  const [
-    existingStatus,
-    setExistingStatus,
-  ] = useState<ConnectStatus>(
-    'none',
-  )
+  const [existingStatus, setExistingStatus] =
+    useState<ConnectStatus>('none')
 
-  const [
-    projectCandidates,
-    setProjectCandidates,
-  ] = useState<Candidate[]>(
-    [],
-  )
+  const [projectCandidates, setProjectCandidates] =
+    useState<Candidate[]>([])
 
-  const [
-    checkingExisting,
-    setCheckingExisting,
-  ] = useState(false)
+  const [checkingExisting, setCheckingExisting] =
+    useState(false)
 
-  const [
-    sentStudentIds,
-    setSentStudentIds,
-  ] = useState<Set<number>>(
-    () => {
-      const session =
-        loadStoredSession()
+  const [sentStudentIds, setSentStudentIds] =
+    useState<Set<number>>(() => {
+      const session = loadStoredSession()
 
       return session
-        ? loadPendingIdsFor(
-            session.recruiter_id,
-          )
+        ? loadPendingIdsFor(session.recruiter_id)
         : new Set()
-    },
-  )
+    })
 
-  const [
-    settingsOpen,
-    setSettingsOpen,
-  ] = useState(false)
+  const [settingsOpen, setSettingsOpen] =
+    useState(false)
 
-  const [
-    settingsVisible,
-    setSettingsVisible,
-  ] = useState(false)
+  const [settingsVisible, setSettingsVisible] =
+    useState(false)
 
-  const [
-    theme,
-    setTheme,
-  ] = useState<Theme>(() => {
-    return (
-      localStorage.getItem(
-        'hirezone-theme',
-      ) as Theme
-    ) || 'light'
-  })
+  const [theme, setTheme] =
+    useState<Theme>(() => {
+      return (
+        (localStorage.getItem(
+          'hirezone-theme',
+        ) as Theme) || 'light'
+      )
+    })
 
-  const [
-    fontSize,
-    setFontSize,
-  ] = useState<FontSize>(() => {
-    return (
-      localStorage.getItem(
-        'hirezone-font-size',
-      ) as FontSize
-    ) || 'medium'
-  })
+  const [fontSize, setFontSize] =
+    useState<FontSize>(() => {
+      return (
+        (localStorage.getItem(
+          'hirezone-font-size',
+        ) as FontSize) || 'medium'
+      )
+    })
 
-  const [
-    animationsEnabled,
-    setAnimationsEnabled,
-  ] = useState(() => {
-    return (
-      localStorage.getItem(
-        'hirezone-animations',
-      ) !== 'false'
-    )
-  })
+  const [animationsEnabled, setAnimationsEnabled] =
+    useState(() => {
+      return (
+        localStorage.getItem(
+          'hirezone-animations',
+        ) !== 'false'
+      )
+    })
 
   const settingsRef =
-    useRef<HTMLDivElement>(
-      null,
-    )
+    useRef<HTMLDivElement>(null)
 
   const activeRecruiterId =
-    recruiter?.recruiter_id ??
-    null
+    recruiter?.recruiter_id ?? null
 
   const activeRecruiterCompany =
-    recruiter?.company_name ??
-    ''
+    recruiter?.company_name ?? ''
 
   const isAuthenticated =
     recruiter !== null
@@ -818,54 +577,41 @@ function App() {
   }
 
   const loadRecruiterChallenges =
-    async (
-      recruiterId: number,
-    ) => {
+    async (recruiterId: number) => {
       setChallengesLoading(true)
       setChallengesError(null)
 
       try {
-        const {
-          data,
-          error,
-        } = await supabase
-          .from(
-            'sponsored_challenges',
-          )
-          .select(`
-            challenge_id,
-            challenge_title,
-            description,
-            domain,
-            difficulty_level,
-            points_available,
-            start_date,
-            deadline,
-            challenge_status,
-            estimated_duration
-          `)
-          .eq(
-            'recruiter_id',
-            recruiterId,
-          )
-          .order(
-            'challenge_id',
-          )
+        const { data, error } =
+          await supabase
+            .from('sponsored_challenges')
+            .select(`
+              challenge_id,
+              challenge_title,
+              description,
+              domain,
+              difficulty_level,
+              points_available,
+              start_date,
+              deadline,
+              challenge_status,
+              estimated_duration
+            `)
+            .eq('recruiter_id', recruiterId)
+            .order('challenge_id')
 
         if (error) {
           throw error
         }
 
         setChallenges(
-          (data ??
-            []) as Challenge[],
+          (data ?? []) as Challenge[],
         )
       } catch (err) {
-        console.error(
-          err,
-        )
+        console.error(err)
 
         setChallenges([])
+
         setChallengesError(
           'Failed to load your challenges.',
         )
@@ -875,129 +621,94 @@ function App() {
     }
 
   const loadChallengeCandidates =
-    async (
-      challengeId: number,
-    ) => {
+    async (challengeId: number) => {
       setLoading(true)
       setError('')
       setNotice('')
 
       try {
-        const {
-          data,
-          error,
-        } = await supabase.rpc(
-          'get_challenge_candidates',
-          {
-            p_challenge_id:
-              challengeId,
-          },
-        )
+        const { data, error } =
+          await supabase.rpc(
+            'get_challenge_candidates',
+            {
+              p_challenge_id: challengeId,
+            },
+          )
 
         if (error) {
           throw error
         }
 
-        const mappedCandidates:
-          Candidate[] =
+        const mappedCandidates: Candidate[] =
           (data ?? []).map(
-            (
-              row: Record<
-                string,
-                unknown
-              >,
-            ) => ({
-              student_id:
-                Number(
-                  row.student_id ?? 0,
-                ),
+            (row: Record<string, unknown>) => ({
+              student_id: Number(
+                row.student_id ?? 0,
+              ),
 
-              student_name:
-                String(
-                  row.student_name ??
-                    '',
-                ),
+              student_name: String(
+                row.student_name ?? '',
+              ),
 
-              email:
-                String(
-                  row.email ?? '',
-                ),
+              email: String(
+                row.email ?? '',
+              ),
 
-              location:
-                String(
-                  row.location ?? '',
-                ),
+              location: String(
+                row.location ?? '',
+              ),
 
-              education:
-                String(
-                  row.education ?? '',
-                ),
+              education: String(
+                row.education ?? '',
+              ),
 
-              college_name:
-                String(
-                  row.college ??
-                    row.college_name ??
-                    '',
-                ),
+              college_name: String(
+                row.college ??
+                  row.college_name ??
+                  '',
+              ),
 
-              graduation_year:
-                Number(
-                  row.graduation_year ??
-                    0,
-                ),
+              graduation_year: Number(
+                row.graduation_year ?? 0,
+              ),
 
               proof_id:
                 row.proof_id == null
                   ? null
-                  : Number(
-                      row.proof_id,
-                    ),
+                  : Number(row.proof_id),
 
-              project_name:
-                String(
-                  row.project_name ??
-                    '',
-                ),
+              project_name: String(
+                row.project_name ?? '',
+              ),
 
-              domain:
-                String(
-                  row.domain ?? '',
-                ),
+              domain: String(
+                row.domain ?? '',
+              ),
 
-              skills:
-                Array.isArray(
-                  row.skills,
-                )
-                  ? row.skills.map(
-                      String,
-                    )
-                  : [],
+              skills: Array.isArray(row.skills)
+                ? row.skills.map(String)
+                : [],
 
               ai_test_score:
-                row.ai_test_score ==
-                null
+                row.ai_test_score == null
                   ? 0
                   : Number(
                       row.ai_test_score,
                     ),
 
-              ai_test_passed:
-                Boolean(
-                  row.ai_test_passed ??
-                    false,
-                ),
+              ai_test_passed: Boolean(
+                row.ai_test_passed ?? false,
+              ),
 
               badges_earned:
-                row.badges_earned ==
-                null
+                row.badges_earned == null
                   ? 0
                   : Number(
                       row.badges_earned,
                     ),
 
               milestones_completed:
-                row.milestones_completed ==
-                null
+                row.milestones_completed == null
                   ? 0
                   : Number(
                       row.milestones_completed,
@@ -1008,13 +719,10 @@ function App() {
               district:
                 row.district == null
                   ? ''
-                  : String(
-                      row.district,
-                    ),
+                  : String(row.district),
 
               relevance_score:
-                row.relevance_score ==
-                null
+                row.relevance_score == null
                   ? 0
                   : Number(
                       row.relevance_score,
@@ -1066,134 +774,148 @@ function App() {
       }
     }
 
-  const searchCandidates =
-    useCallback(
-      async (
-        active: Filters,
-      ) => {
-        setLoading(true)
-        setError('')
-        setNotice('')
+const searchCandidates = useCallback(
+  async (active: Filters) => {
+    setLoading(true)
+    setError('')
+    setNotice('')
 
-        try {
-          const rpcFilters =
-            toRpcFilters(
-              active,
-              activeRecruiterId,
-            )
-
-          const {
-            data,
-            error: rpcError,
-          } = await supabase.rpc(
-            'search_relevant_candidates',
-            rpcFilters,
-          )
-
-          if (rpcError) {
-            setError(
-              `Search failed: ${
-                rpcError.message ||
-                JSON.stringify(
-                  rpcError,
-                )
-              }`,
-            )
-
-            setCandidates([])
-            return
-          }
-
-          if (
-            !Array.isArray(data)
-          ) {
-            setCandidates([])
-
-            setError(
-              'Search returned an unexpected response.',
-            )
-
-            return
-          }
-
-          const candidateData =
-            data as Candidate[]
-
-          setCandidates(
-            candidateData,
-          )
-
-          const discoveredSkills =
-            Array.from(
-              new Set(
-                candidateData
-                  .flatMap(
-                    (
-                      candidate,
-                    ) =>
-                      candidate.skills ??
-                      [],
-                  )
-                  .filter(Boolean),
-              ),
-            )
-
-          const discoveredDomains =
-            Array.from(
-              new Set(
-                candidateData
-                  .map(
-                    (
-                      candidate,
-                    ) =>
-                      candidate.domain,
-                  )
-                  .filter(Boolean),
-              ),
-            )
-
-          if (
-            discoveredSkills.length >
-            0
-          ) {
-            setSkillOptions(
-              discoveredSkills,
-            )
-          }
-
-          if (
-            discoveredDomains.length >
-            0
-          ) {
-            setDomainOptions(
-              discoveredDomains,
-            )
-          }
-        } catch (err) {
-          console.error(
-            'Unexpected candidate search error:',
-            err,
-          )
-
-          const errorMessage =
-            err instanceof Error
-              ? err.message
-              : 'Failed to search candidates.'
-
-          setError(
-            `Search failed: ${errorMessage}`,
-          )
-
-          setCandidates([])
-        } finally {
-          setLoading(false)
-        }
-      },
-      [
+    try {
+      // Build the exact RPC payload using the existing helper.
+      const rpcFilters = toRpcFilters(
+        active,
         activeRecruiterId,
-      ],
-    )
+      )
 
+      console.log('SEARCH FILTERS:', rpcFilters)
+
+      const {
+        data,
+        error: rpcError,
+      } = await supabase.rpc(
+        'search_relevant_candidates',
+        rpcFilters,
+      )
+
+      if (rpcError) {
+        console.error('Search RPC error:', rpcError)
+
+        setError(
+          `Search failed: ${
+            rpcError.message ||
+            JSON.stringify(rpcError)
+          }`,
+        )
+
+        setCandidates([])
+        return
+      }
+
+      console.log('SEARCH RPC RESULT:', data)
+
+      // -------------------------------------------------------
+      // Frontend safety filtering
+      // The database RPC already performs these filters.
+      // This guarantees the UI also respects the values entered.
+      // -------------------------------------------------------
+
+      const minScoreText = active.minScore.trim()
+      const minBadgesText = active.minBadges.trim()
+
+      const minScore =
+        minScoreText === ''
+          ? null
+          : Number(minScoreText)
+
+      const minBadges =
+        minBadgesText === ''
+          ? null
+          : Number(minBadgesText)
+
+      const filteredCandidates = (
+        (data ?? []) as Candidate[]
+      ).filter((candidate) => {
+        // Minimum AI Score
+        if (
+          minScore !== null &&
+          Number.isFinite(minScore)
+        ) {
+          const aiScore = Number(
+            candidate.ai_test_score ?? 0,
+          )
+
+          if (aiScore < minScore) {
+            return false
+          }
+        }
+
+        // Minimum Badges
+        if (
+          minBadges !== null &&
+          Number.isFinite(minBadges)
+        ) {
+          const badges = Number(
+            candidate.badges_earned ?? 0,
+          )
+
+          if (badges < Math.floor(minBadges)) {
+            return false
+          }
+        }
+
+        return true
+      })
+
+      console.log(
+        'MIN SCORE:',
+        minScore,
+        'MIN BADGES:',
+        minBadges,
+      )
+
+      console.log(
+        'FILTERED RESULT COUNT:',
+        filteredCandidates.length,
+      )
+
+      console.log(
+        'FILTERED RESULTS:',
+        filteredCandidates,
+      )
+
+      setCandidates(filteredCandidates)
+
+      if (filteredCandidates.length === 0) {
+        setNotice(
+          'No candidates match the selected filters.',
+        )
+      } else {
+        setNotice(
+          `${filteredCandidates.length} candidate${
+            filteredCandidates.length === 1
+              ? ''
+              : 's'
+          } found.`,
+        )
+      }
+    } catch (err) {
+      console.error('Candidate search failed:', err)
+
+      setError(
+        `Search failed: ${
+          err instanceof Error
+            ? err.message
+            : JSON.stringify(err)
+        }`,
+      )
+
+      setCandidates([])
+    } finally {
+      setLoading(false)
+    }
+  },
+  [activeRecruiterId],
+)
   const loadConnections =
     async () => {
       if (
@@ -1206,16 +928,14 @@ function App() {
       setConnectionsLoading(true)
 
       try {
-        const {
-          data,
-          error,
-        } = await supabase.rpc(
-          'get_recruiter_connections',
-          {
-            p_recruiter_id:
-              activeRecruiterId,
-          },
-        )
+        const { data, error } =
+          await supabase.rpc(
+            'get_recruiter_connections',
+            {
+              p_recruiter_id:
+                activeRecruiterId,
+            },
+          )
 
         if (error) {
           throw error
@@ -1223,7 +943,7 @@ function App() {
 
         setConnections(
           Array.isArray(data)
-            ? data as Connection[]
+            ? (data as Connection[])
             : [],
         )
       } catch (err) {
@@ -1272,9 +992,7 @@ function App() {
 
     localStorage.setItem(
       'hirezone-animations',
-      String(
-        animationsEnabled,
-      ),
+      String(animationsEnabled),
     )
   }, [animationsEnabled])
 
@@ -1348,10 +1066,8 @@ function App() {
         )
 
         if (
-          resolved ===
-            'pending' ||
-          resolved ===
-            'accepted'
+          resolved === 'pending' ||
+          resolved === 'accepted'
         ) {
           setSentStudentIds(
             (previous) =>
@@ -1363,15 +1079,11 @@ function App() {
           )
         }
 
-        if (
-          resolved === 'none'
-        ) {
+        if (resolved === 'none') {
           setSentStudentIds(
             (previous) => {
               const next =
-                new Set(
-                  previous,
-                )
+                new Set(previous)
 
               next.delete(
                 selectedProof.student_id,
@@ -1400,9 +1112,7 @@ function App() {
     const onKeyDown = (
       event: KeyboardEvent,
     ) => {
-      if (
-        event.key !== 'Escape'
-      ) {
+      if (event.key !== 'Escape') {
         return
       }
 
@@ -1413,9 +1123,7 @@ function App() {
         return
       }
 
-      if (
-        connectModalOpen
-      ) {
+      if (connectModalOpen) {
         setConnectModalOpen(false)
         return
       }
@@ -1474,9 +1182,7 @@ function App() {
   }, [settingsVisible])
 
   const handleLogin =
-    async (
-      event?: React.FormEvent,
-    ) => {
+    async (event?: FormEvent) => {
       event?.preventDefault()
 
       const recruiterId =
@@ -1496,9 +1202,7 @@ function App() {
       }
 
       if (
-        !Number.isFinite(
-          recruiterId,
-        )
+        !Number.isFinite(recruiterId)
       ) {
         setLoginError(
           'Recruiter ID must be a number.',
@@ -1538,8 +1242,7 @@ function App() {
 
         if (
           !row ||
-          row.recruiter_id ==
-            null
+          row.recruiter_id == null
         ) {
           throw new Error(
             'Invalid recruiter ID or password.',
@@ -1590,9 +1293,7 @@ function App() {
     }
 
   const handleRegister =
-    async (
-      event: React.FormEvent,
-    ) => {
+    async (event: FormEvent) => {
       event.preventDefault()
 
       if (
@@ -1603,6 +1304,7 @@ function App() {
         setRegisterError(
           'Company name, email and password are required.',
         )
+
         return
       }
 
@@ -1612,6 +1314,7 @@ function App() {
         setRegisterError(
           'Password must be at least 6 characters.',
         )
+
         return
       }
 
@@ -1673,8 +1376,7 @@ function App() {
 
         if (
           !row ||
-          row.recruiter_id ==
-            null
+          row.recruiter_id == null
         ) {
           throw new Error(
             'Registration completed but no Recruiter ID was returned.',
@@ -1717,9 +1419,7 @@ function App() {
     setProjectCandidates([])
     setSelectedChallengeId(null)
     setSelectedChallenge(null)
-    setSentStudentIds(
-      new Set(),
-    )
+    setSentStudentIds(new Set())
     setActivePage('search')
   }
 
@@ -1748,182 +1448,266 @@ function App() {
       null,
     )
 
-    setSelectedChallenge(null)
-
-    setProjectCandidates(
-      [],
+    setSelectedChallenge(
+      null,
     )
+
+    setProjectCandidates([])
 
     void searchCandidates(
       DEFAULT_FILTERS,
     )
   }
 
- const loadCandidateProof = async (studentId: number) => {
-  console.log('Opening proof for student:', studentId)
-  setProofLoading(true)
-  setProofError('')
-  setSelectedProof(null)
-
-  try {
-    // Load the proof-of-work record
-    const { data, error } = await supabase.rpc(
-      'get_candidate_proof',
-      { p_student_id: studentId },
-    )
-
-    console.log('Proof RPC response:', { data, error })
-
-    if (error) {
-      throw new Error(error.message)
-    }
-
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      throw new Error('No proof-of-work record found for this candidate.')
-    }
-
-    const row = data[0]
-
-    // Load this student's GitHub projects
-    const {
-      data: githubRepos,
-      error: githubError,
-    } = await supabase.rpc(
-      'get_candidate_github_repos',
-      { p_student_id: studentId },
-    )
-
-    if (githubError) {
-      console.warn(
-        'Failed to load GitHub repositories:',
-        githubError,
+  const loadCandidateProof =
+    async (studentId: number) => {
+      console.log(
+        'Opening proof for student:',
+        studentId,
       )
+
+      setProofLoading(true)
+      setProofError('')
+      setSelectedProof(null)
+
+      try {
+        const {
+          data,
+          error,
+        } = await supabase.rpc(
+          'get_candidate_proof',
+          {
+            p_student_id:
+              studentId,
+          },
+        )
+
+        console.log(
+          'Proof RPC response:',
+          { data, error },
+        )
+
+        if (error) {
+          throw new Error(
+            error.message,
+          )
+        }
+
+        if (
+          !data ||
+          !Array.isArray(data) ||
+          data.length === 0
+        ) {
+          throw new Error(
+            'No proof-of-work record found for this candidate.',
+          )
+        }
+
+        const row = data[0]
+
+        const {
+          data: githubRepos,
+          error: githubError,
+        } = await supabase.rpc(
+          'get_candidate_github_repos',
+          {
+            p_student_id:
+              studentId,
+          },
+        )
+
+        if (githubError) {
+          console.warn(
+            'Failed to load GitHub repositories:',
+            githubError,
+          )
+        }
+
+        const proofProjectName =
+          row.project_name
+            ?.trim()
+            .toLowerCase() || ''
+
+        const matchingRepository =
+          Array.isArray(githubRepos)
+            ? githubRepos.find(
+                (repo: {
+                  project_name?: string | null
+                  github_url?: string | null
+                }) =>
+                  repo.project_name
+                    ?.trim()
+                    .toLowerCase() ===
+                    proofProjectName &&
+                  typeof repo.github_url ===
+                    'string' &&
+                  repo.github_url.trim() !== '',
+              )
+            : null
+
+        console.log(
+          'Proof project:',
+          row.project_name,
+        )
+
+        console.log(
+          'Matching GitHub repository:',
+          matchingRepository,
+        )
+
+        setSelectedProof({
+          student_id: Number(
+            row.student_id,
+          ),
+
+          student_name:
+            row.student_name ?? '',
+
+          email:
+            row.email ?? '',
+
+          phone:
+            row.phone ?? null,
+
+          location:
+            row.location ?? '',
+
+          education:
+            row.education ?? '',
+
+          college_name:
+            row.college_name ?? '',
+
+          graduation_year:
+            row.graduation_year !== null &&
+            row.graduation_year !== undefined
+              ? Number(
+                  row.graduation_year,
+                )
+              : null,
+
+          proof_id:
+            row.proof_id !== null &&
+            row.proof_id !== undefined
+              ? Number(
+                  row.proof_id,
+                )
+              : null,
+
+          project_name:
+            row.project_name ?? '',
+
+          domain:
+            row.domain ?? '',
+
+          skills:
+            Array.isArray(row.skills)
+              ? row.skills
+              : [],
+
+          milestones_completed:
+            row.milestones_completed !==
+              null &&
+            row.milestones_completed !==
+              undefined
+              ? Number(
+                  row.milestones_completed,
+                )
+              : 0,
+
+          ai_test_score:
+            row.ai_test_score !== null &&
+            row.ai_test_score !== undefined
+              ? Number(
+                  row.ai_test_score,
+                )
+              : null,
+
+          ai_test_passed:
+            row.ai_test_passed !== null &&
+            row.ai_test_passed !== undefined
+              ? Boolean(
+                  row.ai_test_passed,
+                )
+              : false,
+
+          blog_posts_count:
+            row.blog_posts_count !==
+              null &&
+            row.blog_posts_count !==
+              undefined
+              ? Number(
+                  row.blog_posts_count,
+                )
+              : 0,
+
+          badges_earned:
+            row.badges_earned !== null &&
+            row.badges_earned !== undefined
+              ? Number(
+                  row.badges_earned,
+                )
+              : 0,
+
+          profile_score:
+            row.profile_score !== null &&
+            row.profile_score !== undefined
+              ? Number(
+                  row.profile_score,
+                )
+              : null,
+
+          last_updated:
+            row.last_updated ?? null,
+
+          github_url:
+            matchingRepository?.github_url
+              ?.trim() ?? null,
+
+          github_repos:
+            matchingRepository
+              ? [
+                  {
+                    project_name:
+                      matchingRepository.project_name
+                        ?.trim() ||
+                      row.project_name ||
+                      'Student Project',
+
+                    github_url:
+                      matchingRepository.github_url!.trim(),
+
+                    live_demo_url:
+                      matchingRepository.live_demo_url
+                        ?.trim() ||
+                      null,
+                  },
+                ]
+              : [],
+        })
+
+        console.log(
+          'Proof loaded successfully:',
+          row,
+        )
+      } catch (error) {
+        console.error(
+          'Failed to load candidate proof:',
+          error,
+        )
+
+        setProofError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to load candidate proof.',
+        )
+      } finally {
+        setProofLoading(false)
+      }
     }
 
-    // IMPORTANT:
-    // Only use the GitHub repository whose project name
-    // matches the Proof-of-Work project being displayed.
-    const proofProjectName =
-      row.project_name?.trim().toLowerCase() || ''
-
-    const matchingRepository =
-      Array.isArray(githubRepos)
-        ? githubRepos.find(
-            (repo: {
-              project_name?: string | null
-              github_url?: string | null
-            }) =>
-              repo.project_name?.trim().toLowerCase() ===
-                proofProjectName &&
-              typeof repo.github_url === 'string' &&
-              repo.github_url.trim() !== '',
-          )
-        : null
-
-    console.log('Proof project:', row.project_name)
-    console.log('Matching GitHub repository:', matchingRepository)
-
-    setSelectedProof({
-      student_id: Number(row.student_id),
-      student_name: row.student_name ?? '',
-      email: row.email ?? '',
-      phone: row.phone ?? null,
-      location: row.location ?? '',
-      education: row.education ?? '',
-      college_name: row.college_name ?? '',
-      graduation_year:
-        row.graduation_year !== null &&
-        row.graduation_year !== undefined
-          ? Number(row.graduation_year)
-          : null,
-
-      proof_id:
-        row.proof_id !== null &&
-        row.proof_id !== undefined
-          ? Number(row.proof_id)
-          : null,
-
-      project_name: row.project_name ?? '',
-      domain: row.domain ?? '',
-      skills: Array.isArray(row.skills) ? row.skills : [],
-
-      milestones_completed:
-        row.milestones_completed !== null &&
-        row.milestones_completed !== undefined
-          ? Number(row.milestones_completed)
-          : 0,
-
-      ai_test_score:
-        row.ai_test_score !== null &&
-        row.ai_test_score !== undefined
-          ? Number(row.ai_test_score)
-          : null,
-
-      ai_test_passed:
-        row.ai_test_passed !== null &&
-        row.ai_test_passed !== undefined
-          ? Boolean(row.ai_test_passed)
-          : false,
-
-      blog_posts_count:
-        row.blog_posts_count !== null &&
-        row.blog_posts_count !== undefined
-          ? Number(row.blog_posts_count)
-          : 0,
-
-      badges_earned:
-        row.badges_earned !== null &&
-        row.badges_earned !== undefined
-          ? Number(row.badges_earned)
-          : 0,
-
-      profile_score:
-        row.profile_score !== null &&
-        row.profile_score !== undefined
-          ? Number(row.profile_score)
-          : null,
-
-      last_updated: row.last_updated ?? null,
-
-      // Only the repository belonging to the
-      // current Proof-of-Work project.
-      github_url:
-        matchingRepository?.github_url?.trim() ?? null,
-
-      github_repos: matchingRepository
-        ? [
-            {
-              project_name:
-                matchingRepository.project_name?.trim() ||
-                row.project_name ||
-                'Student Project',
-              github_url:
-                matchingRepository.github_url!.trim(),
-              live_demo_url:
-                matchingRepository.live_demo_url?.trim() ||
-                null,
-            },
-          ]
-        : [],
-    })
-
-    console.log('Proof loaded successfully:', row)
-  } catch (error) {
-    console.error('Failed to load candidate proof:', error)
-
-    setProofError(
-      error instanceof Error
-        ? error.message
-        : 'Failed to load candidate proof.',
-    )
-  } finally {
-    setProofLoading(false)
-  }
-}
- const openConnectModal = () => {
-    if (
-      !selectedProof
-    ) {
+  const openConnectModal = () => {
+    if (!selectedProof) {
       return
     }
 
@@ -1940,10 +1724,8 @@ function App() {
     }
 
     if (
-      existingStatus ===
-        'pending' ||
-      existingStatus ===
-        'accepted'
+      existingStatus === 'pending' ||
+      existingStatus === 'accepted'
     ) {
       setProofError(
         'A request already exists for this candidate.',
@@ -1984,26 +1766,27 @@ function App() {
       setConnectError('')
 
       try {
-        const {
-          error,
-        } = await supabase.rpc(
-          'create_recruiter_connect',
-          {
-            p_recruiter_id:
-              activeRecruiterId,
+        const { error } =
+          await supabase.rpc(
+            'create_recruiter_connect',
+            {
+              p_recruiter_id:
+                activeRecruiterId,
 
-            p_student_id:
-              selectedProof.student_id,
+              p_student_id:
+                selectedProof.student_id,
 
-            p_challenge_id:
-  selectedConnectChallengeId
-    ? Number(selectedConnectChallengeId)
-    : null,
+              p_challenge_id:
+                selectedConnectChallengeId
+                  ? Number(
+                      selectedConnectChallengeId,
+                    )
+                  : null,
 
-            p_message:
-              connectMessage.trim(),
-          },
-        )
+              p_message:
+                connectMessage.trim(),
+            },
+          )
 
         if (error) {
           if (
@@ -2031,9 +1814,7 @@ function App() {
           (previous) =>
             new Set(
               previous,
-            ).add(
-              studentId,
-            ),
+            ).add(studentId),
         )
 
         setExistingStatus(
@@ -2075,9 +1856,7 @@ function App() {
         <div className="login-wrapper">
           <div className="login-card">
             <div className="login-brand">
-              <h1>
-                Hirezone
-              </h1>
+              <h1>Hirezone</h1>
 
               <p>
                 Industry Talent Discovery
@@ -2087,15 +1866,13 @@ function App() {
 
             <div className="login-title">
               <h2>
-                {authMode ===
-                'login'
+                {authMode === 'login'
                   ? 'Recruiter Login'
                   : 'Register Company'}
               </h2>
 
               <p>
-                {authMode ===
-                'login'
+                {authMode === 'login'
                   ? 'Sign in with your Recruiter ID to continue'
                   : 'Create your company recruiter account'}
               </p>
@@ -2105,15 +1882,12 @@ function App() {
               <button
                 type="button"
                 className={
-                  authMode ===
-                  'login'
+                  authMode === 'login'
                     ? 'auth-mode-active'
                     : ''
                 }
                 onClick={() => {
-                  setAuthMode(
-                    'login',
-                  )
+                  setAuthMode('login')
                   setRegisterError('')
                   setRegisteredRecruiterId(
                     null,
@@ -2126,15 +1900,12 @@ function App() {
               <button
                 type="button"
                 className={
-                  authMode ===
-                  'register'
+                  authMode === 'register'
                     ? 'auth-mode-active'
                     : ''
                 }
                 onClick={() => {
-                  setAuthMode(
-                    'register',
-                  )
+                  setAuthMode('register')
                   setLoginError('')
                 }}
               >
@@ -2142,13 +1913,10 @@ function App() {
               </button>
             </div>
 
-            {authMode ===
-            'login' ? (
+            {authMode === 'login' ? (
               <form
                 className="login-form"
-                onSubmit={
-                  handleLogin
-                }
+                onSubmit={handleLogin}
               >
                 <label>
                   Recruiter ID
@@ -2161,12 +1929,9 @@ function App() {
                   value={
                     loginRecruiterId
                   }
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     setLoginRecruiterId(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                 />
@@ -2186,12 +1951,9 @@ function App() {
                     value={
                       loginPassword
                     }
-                    onChange={(
-                      event,
-                    ) =>
+                    onChange={(event) =>
                       setLoginPassword(
-                        event.target
-                          .value,
+                        event.target.value,
                       )
                     }
                     autoComplete="current-password"
@@ -2202,9 +1964,8 @@ function App() {
                     className="login-show-password"
                     onClick={() =>
                       setShowLoginPassword(
-                        (
-                          value,
-                        ) => !value,
+                        (value) =>
+                          !value,
                       )
                     }
                   >
@@ -2249,12 +2010,9 @@ function App() {
                   value={
                     registerCompanyName
                   }
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     setRegisterCompanyName(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                 />
@@ -2269,12 +2027,9 @@ function App() {
                   value={
                     registerEmail
                   }
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     setRegisterEmail(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                   autoComplete="email"
@@ -2295,12 +2050,9 @@ function App() {
                     value={
                       registerPassword
                     }
-                    onChange={(
-                      event,
-                    ) =>
+                    onChange={(event) =>
                       setRegisterPassword(
-                        event.target
-                          .value,
+                        event.target.value,
                       )
                     }
                     autoComplete="new-password"
@@ -2311,9 +2063,8 @@ function App() {
                     className="login-show-password"
                     onClick={() =>
                       setShowRegisterPassword(
-                        (
-                          value,
-                        ) => !value,
+                        (value) =>
+                          !value,
                       )
                     }
                   >
@@ -2330,15 +2081,10 @@ function App() {
                 <input
                   type="tel"
                   placeholder="Enter phone number"
-                  value={
-                    registerPhone
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={registerPhone}
+                  onChange={(event) =>
                     setRegisterPhone(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                 />
@@ -2353,12 +2099,9 @@ function App() {
                   value={
                     registerLocation
                   }
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     setRegisterLocation(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                 />
@@ -2373,12 +2116,9 @@ function App() {
                   value={
                     registerIndustry
                   }
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     setRegisterIndustry(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                 />
@@ -2391,12 +2131,9 @@ function App() {
                   value={
                     registerCompanyType
                   }
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     setRegisterCompanyType(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                 >
@@ -2427,12 +2164,9 @@ function App() {
                   value={
                     registerWebsite
                   }
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     setRegisterWebsite(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
                 />
@@ -2464,6 +2198,7 @@ function App() {
                         setAuthMode(
                           'login',
                         )
+
                         setRegisteredRecruiterId(
                           null,
                         )
@@ -2497,9 +2232,7 @@ function App() {
     <div className="app">
       <header className="header">
         <div>
-          <h1>
-            Hirezone
-          </h1>
+          <h1>Hirezone</h1>
 
           <p>
             Industry Talent Discovery
@@ -2510,15 +2243,12 @@ function App() {
         <div className="nav-buttons">
           <button
             className={
-              activePage ===
-              'search'
+              activePage === 'search'
                 ? 'nav-active'
                 : ''
             }
             onClick={() =>
-              setActivePage(
-                'search',
-              )
+              setActivePage('search')
             }
           >
             Find Candidates
@@ -2688,9 +2418,8 @@ function App() {
                     type="button"
                     onClick={() =>
                       setAnimationsEnabled(
-                        (
-                          value,
-                        ) => !value,
+                        (value) =>
+                          !value,
                       )
                     }
                   >
@@ -2707,8 +2436,7 @@ function App() {
       </header>
 
       <main className="container">
-        {activePage ===
-        'search' ? (
+        {activePage === 'search' ? (
           <>
             <section className="hero">
               <div>
@@ -2790,9 +2518,7 @@ function App() {
 
                     const challenge =
                       challenges.find(
-                        (
-                          item,
-                        ) =>
+                        (item) =>
                           item.challenge_id ===
                           challengeId,
                       ) ?? null
@@ -2811,9 +2537,7 @@ function App() {
                   </option>
 
                   {challenges.map(
-                    (
-                      challenge,
-                    ) => (
+                    (challenge) => (
                       <option
                         key={
                           challenge.challenge_id
@@ -2843,9 +2567,7 @@ function App() {
                       )
                     ) {
                       setFilters(
-                        (
-                          previous,
-                        ) => ({
+                        (previous) => ({
                           ...previous,
                           skill: [
                             ...previous.skill,
@@ -2883,15 +2605,11 @@ function App() {
                           className="selected-option"
                           onClick={() =>
                             setFilters(
-                              (
-                                previous,
-                              ) => ({
+                              (previous) => ({
                                 ...previous,
                                 skill:
                                   previous.skill.filter(
-                                    (
-                                      item,
-                                    ) =>
+                                    (item) =>
                                       item !==
                                       skill,
                                   ),
@@ -2912,13 +2630,10 @@ function App() {
                   }
                   onChange={(event) =>
                     setFilters(
-                      (
-                        previous,
-                      ) => ({
+                      (previous) => ({
                         ...previous,
                         district:
-                          event.target
-                            .value,
+                          event.target.value,
                       }),
                     )
                   }
@@ -2990,9 +2705,7 @@ function App() {
                       )
                     ) {
                       setFilters(
-                        (
-                          previous,
-                        ) => ({
+                        (previous) => ({
                           ...previous,
                           domain: [
                             ...previous.domain,
@@ -3008,9 +2721,7 @@ function App() {
                   </option>
 
                   {domainOptions.map(
-                    (
-                      domain,
-                    ) => (
+                    (domain) => (
                       <option
                         key={domain}
                         value={domain}
@@ -3025,24 +2736,18 @@ function App() {
                   0 && (
                   <div className="selected-options">
                     {filters.domain.map(
-                      (
-                        domain,
-                      ) => (
+                      (domain) => (
                         <button
                           key={domain}
                           type="button"
                           className="selected-option"
                           onClick={() =>
                             setFilters(
-                              (
-                                previous,
-                              ) => ({
+                              (previous) => ({
                                 ...previous,
                                 domain:
                                   previous.domain.filter(
-                                    (
-                                      item,
-                                    ) =>
+                                    (item) =>
                                       item !==
                                       domain,
                                   ),
@@ -3066,13 +2771,10 @@ function App() {
                   }
                   onChange={(event) =>
                     setFilters(
-                      (
-                        previous,
-                      ) => ({
+                      (previous) => ({
                         ...previous,
                         minScore:
-                          event.target
-                            .value,
+                          event.target.value,
                       }),
                     )
                   }
@@ -3087,13 +2789,10 @@ function App() {
                   }
                   onChange={(event) =>
                     setFilters(
-                      (
-                        previous,
-                      ) => ({
+                      (previous) => ({
                         ...previous,
                         minBadges:
-                          event.target
-                            .value,
+                          event.target.value,
                       }),
                     )
                   }
@@ -3219,10 +2918,7 @@ function App() {
                                 candidate.skills ??
                                 []
                               )
-                                .slice(
-                                  0,
-                                  4,
-                                )
+                                .slice(0, 4)
                                 .map(
                                   (
                                     skill,
@@ -3367,9 +3063,7 @@ function App() {
                 [
                   'Sent',
                   connections.filter(
-                    (
-                      item,
-                    ) =>
+                    (item) =>
                       item.status ===
                       'Sent',
                   ).length,
@@ -3377,9 +3071,7 @@ function App() {
                 [
                   'Viewed',
                   connections.filter(
-                    (
-                      item,
-                    ) =>
+                    (item) =>
                       item.status ===
                       'Viewed',
                   ).length,
@@ -3387,20 +3079,13 @@ function App() {
                 [
                   'Accepted',
                   connections.filter(
-                    (
-                      item,
-                    ) =>
+                    (item) =>
                       item.status ===
                       'Accepted',
                   ).length,
                 ],
               ].map(
-                (
-                  [
-                    label,
-                    value,
-                  ],
-                ) => (
+                ([label, value]) => (
                   <div
                     className="stat-card"
                     key={String(
@@ -3461,9 +3146,7 @@ function App() {
             ) : (
               <div className="connections-list">
                 {filteredConnections.map(
-                  (
-                    connection,
-                  ) => (
+                  (connection) => (
                     <article
                       className="connection-card"
                       key={
@@ -3555,9 +3238,7 @@ function App() {
         <div
           className="modal-overlay"
           onClick={() =>
-            setSelectedProof(
-              null,
-            )
+            setSelectedProof(null)
           }
         >
           <div
@@ -3646,7 +3327,8 @@ function App() {
               <p>
                 Graduation Year:{' '}
                 {
-                  selectedProof.graduation_year
+                  selectedProof.graduation_year ??
+                  '—'
                 }
               </p>
             </div>
@@ -3673,49 +3355,69 @@ function App() {
                   }
                 </p>
               </div>
-<div className="proof-section">
-  <h3>GitHub Repository</h3>
 
-  {selectedProof.github_repos &&
-  selectedProof.github_repos.length > 0 ? (
-    <div className="github-repository-list">
-      {selectedProof.github_repos.map((repo, index) => (
-        <div
-          className="github-repository-item"
-          key={`${repo.github_url}-${index}`}
-        >
-          <div className="github-repository-info">
-            <strong>{repo.project_name}</strong>
+              <div className="proof-section">
+                <h3>
+                  GitHub Repository
+                </h3>
 
-            {repo.live_demo_url && (
-              <a
-                href={repo.live_demo_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="live-demo-link"
-              >
-                View Live Demo
-              </a>
-            )}
-          </div>
+                {selectedProof.github_repos &&
+                selectedProof.github_repos.length >
+                  0 ? (
+                  <div className="github-repository-list">
+                    {selectedProof.github_repos.map(
+                      (
+                        repo,
+                        index,
+                      ) => (
+                        <div
+                          className="github-repository-item"
+                          key={`${repo.github_url}-${index}`}
+                        >
+                          <div className="github-repository-info">
+                            <strong>
+                              {
+                                repo.project_name
+                              }
+                            </strong>
 
-          <a
-            href={repo.github_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="github-repository-link"
-          >
-            View Repository
-          </a>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <p className="github-unavailable">
-      GitHub repository not provided for this project.
-    </p>
-  )}
-</div>           <div className="proof-skills">
+                            {repo.live_demo_url && (
+                              <a
+                                href={
+                                  repo.live_demo_url
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="live-demo-link"
+                              >
+                                View Live Demo
+                              </a>
+                            )}
+                          </div>
+
+                          <a
+                            href={
+                              repo.github_url
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="github-repository-link"
+                          >
+                            View Repository
+                          </a>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <p className="github-unavailable">
+                    GitHub repository not
+                    provided for this project.
+                  </p>
+                )}
+              </div>
+
+              <div className="proof-skills">
                 {(
                   selectedProof.skills ??
                   []
@@ -3835,7 +3537,6 @@ function App() {
 
               <p>
                 Connecting with{' '}
-
                 <strong>
                   {
                     selectedProof.student_name
@@ -3879,9 +3580,7 @@ function App() {
                 </option>
 
                 {challenges.map(
-                  (
-                    challenge,
-                  ) => (
+                  (challenge) => (
                     <option
                       key={
                         challenge.challenge_id
@@ -3961,7 +3660,6 @@ function App() {
             <p>
               Your connection request has
               been sent to{' '}
-
               <strong>
                 {connectSuccess}
               </strong>
@@ -3987,4 +3685,3 @@ function App() {
 }
 
 export default App
-
